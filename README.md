@@ -2,25 +2,25 @@
 
 Tiện ích Chrome đơn giản để quản lý proxy cho mục đích cá nhân.
 
-## Tính năng
+## Features
 
-- ✅ Quản lý danh sách proxy (HTTP/SOCKS5)
-- ✅ Thêm/Xóa/Chỉnh sửa cấu hình proxy
-- ✅ Hỗ trợ authentication (username/password)
-- ✅ Chuyển đổi nhanh giữa các proxy
-- ✅ Direct Mode - tắt proxy
-- ✅ Lưu trữ dữ liệu với chrome.storage.local
-- ✅ Tự động khôi phục proxy khi khởi động Chrome
+- ✅ Manage proxy list (HTTP/SOCKS5)
+- ✅ Add/Edit/Delete proxy configurations
+- ✅ Authentication support (username/password)
+- ✅ Quick switch between proxies
+- ✅ Direct mode (disable proxy)
+- ✅ Store data with chrome.storage.local
+- ✅ Auto restore proxy on Chrome startup
 
-## Cài đặt
+## Installation
 
-1. Mở Chrome và truy cập `chrome://extensions/`
-2. Bật **Developer mode** (góc trên bên phải)
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable **Developer mode** (top right)
 3. Click **Load unpacked**
-4. Chọn thư mục `proxy-change`
-5. Extension sẽ xuất hiện trên thanh công cụ
+4. Select the project folder
+5. The extension will appear in the toolbar
 
-## Cấu trúc file
+## File Structure
 
 ```
 proxy-change/
@@ -36,23 +36,24 @@ proxy-change/
 └── README.md
 ```
 
-## Sử dụng
+## Usage
 
-1. **Thêm proxy**: Điền thông tin vào form và nhấn "Save"
-2. **Kích hoạt proxy**: Nhấn nút ▶ bên cạnh proxy muốn sử dụng
-3. **Chỉnh sửa**: Nhấn nút ✎ để sửa cấu hình
-4. **Xóa**: Nhấn nút ✕ để xóa proxy
-5. **Direct Mode**: Nhấn "Direct Mode" để tắt proxy
+1. **Add proxy**: Fill in the form and click "Save"
+2. **Activate proxy**: Click ▶ next to the proxy you want to use
+3. **Edit**: Click ✎ to edit configuration
+4. **Delete**: Click ✕ to remove proxy
+5. **Direct Mode**: Click "Direct Mode" to disable proxy
 
-## Lưu ý
+## Notes
 
-- Extension sử dụng `chrome.proxy.settings.set` để thay đổi proxy ở cấp Chrome
-- Proxy được khôi phục tự động khi khởi động lại Chrome
-- Dữ liệu được lưu cục bộ trong trình duyệt
+- Uses `chrome.proxy.settings.set` to change Chrome-level proxy settings
+- Requires `declarativeNetRequest` permission to modify User-Agent when spoofing is enabled
+- Proxy is automatically restored when Chrome restarts
+- Data is stored locally in the browser
 
-## Mục đích sử dụng
+## Intended Use
 
-Công cụ cá nhân, hợp pháp, không dùng để vượt giới hạn hay lách chặn.
+Personal and legal use only. Do not use to bypass restrictions or policies.
 
 ## Images
 <img width="1415" height="1086" alt="Screenshot 2025-12-02 at 01 49 37" src="https://github.com/user-attachments/assets/99a34a7f-a41e-45b4-bc24-883f30844a49" />

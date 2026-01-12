@@ -17,6 +17,17 @@ const uaCurrent = document.getElementById('ua-current')
 const btnUAClose = document.getElementById('btn-ua-close')
 const btnUAReset = document.getElementById('btn-ua-reset')
 
+// Logs elements
+const btnLogs = document.getElementById('btn-logs')
+const logsPanel = document.getElementById('logs-panel')
+const logsList = document.getElementById('logs-list')
+const btnLogsClose = document.getElementById('btn-logs-close')
+const btnLogsRefresh = document.getElementById('btn-logs-refresh')
+const btnLogsClear = document.getElementById('btn-logs-clear')
+
+// Test connection button
+const btnTestConnection = document.getElementById('btn-test-connection')
+
 // Form inputs
 const editIdInput = document.getElementById('edit-id')
 const nameInput = document.getElementById('proxy-name')
@@ -26,12 +37,15 @@ const portInput = document.getElementById('proxy-port')
 const usernameInput = document.getElementById('proxy-username')
 const passwordInput = document.getElementById('proxy-password')
 const bypassInput = document.getElementById('proxy-bypass')
+const authWarning = document.getElementById('auth-warning')
 
 // State
 let proxies = []
 let activeProxyId = null
 let pingResults = {} // Store ping results { proxyId: { ping: number | null, status: 'checking' | 'done' | 'error' } }
 let currentUA = null // Current User-Agent
+let connectionLogs = [] // Stored connection logs
+let transientLogs = [] // UI-only logs (e.g., test diagnostics)
 
 // Predefined User-Agents (2024 latest versions)
 const USER_AGENTS = [
@@ -82,10 +96,13 @@ document.addEventListener('DOMContentLoaded', init)
 
 async function init() {
   await loadData()
+  await loadLogs()
   renderProxyList()
   updateStatus()
   renderUAList()
   updateUADisplay()
+  renderLogs()
+  updateLogsButton()
 }
 
 // Load data from storage
@@ -502,4 +519,187 @@ uaList.addEventListener('click', e => {
   if (!item) return
   const ua = item.dataset.ua
   setUserAgent(ua)
+})
+
+// ============== Logs Functions ==============
+
+// Load logs from storage
+async function loadLogs() {
+  const response = await chrome.runtime.sendMessage({ action: 'getLogs' })
+  connectionLogs = response.logs || []
+}
+
+// Render logs list
+function renderLogs() {
+  const merged = [...transientLogs, ...connectionLogs]
+  const seen = new Set()
+  const combined = merged.filter(log => {
+    if (seen.has(log.id)) return false
+    seen.add(log.id)
+    return true
+  })
+
+  if (combined.length === 0) {
+    logsList.innerHTML = '<div class="logs-empty">No connection logs yet</div>'
+    return
+  }
+
+  logsList.innerHTML = combined
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .map(
+      log => `
+    <div class="log-item log-${log.level}">
+      <div class="log-header">
+        <span class="log-level">${getLogLevelIcon(log.level)} ${log.level.toUpperCase()}</span>
+        <span class="log-time">${formatLogTime(log.timestamp)}</span>
+      </div>
+      <div class="log-message">${escapeHtml(log.message)}</div>
+      ${log.host ? `<div class="log-details">${escapeHtml(log.host)}${log.port ? ':' + log.port : ''}</div>` : ''}
+    </div>
+  `
+    )
+    .join('')
+}
+
+// Get log level icon
+function getLogLevelIcon(level) {
+  const icons = {
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️',
+    success: '✅',
+  }
+  return icons[level] || '•'
+}
+
+// Format log timestamp
+function formatLogTime(isoString) {
+  const date = new Date(isoString)
+  return date.toLocaleTimeString()
+}
+
+// Update logs button to show error indicator
+function updateLogsButton() {
+  const hasErrors = [...transientLogs, ...connectionLogs].some(log => log.level === 'error')
+  btnLogs.classList.toggle('has-errors', hasErrors)
+}
+
+// Toggle logs panel
+function toggleLogsPanel() {
+  const isVisible = logsPanel.style.display !== 'none'
+  const willShow = !isVisible
+  logsPanel.style.display = willShow ? 'block' : 'none'
+  document.body.classList.toggle('logs-open', willShow)
+  if (willShow) {
+    loadLogs().then(() => renderLogs())
+  }
+}
+
+// Refresh logs
+async function refreshLogs() {
+  await loadLogs()
+  renderLogs()
+  updateLogsButton()
+}
+
+// Clear logs
+async function clearLogsAction() {
+  if (!confirm('Clear all connection logs?')) return
+  await chrome.runtime.sendMessage({ action: 'clearLogs' })
+  connectionLogs = []
+  transientLogs = []
+  renderLogs()
+  updateLogsButton()
+}
+
+// Logs button click
+btnLogs.addEventListener('click', toggleLogsPanel)
+
+// Logs close button
+btnLogsClose.addEventListener('click', () => {
+  logsPanel.style.display = 'none'
+  document.body.classList.remove('logs-open')
+})
+
+// Logs refresh button
+btnLogsRefresh.addEventListener('click', refreshLogs)
+
+// Logs clear button
+btnLogsClear.addEventListener('click', clearLogsAction)
+
+// ============== SOCKS Warning ==============
+
+// Show/hide SOCKS authentication warning based on type and credentials
+function updateAuthWarning() {
+  const isSocks = typeInput.value === 'socks4' || typeInput.value === 'socks5'
+  const hasAuth = usernameInput.value.trim() || passwordInput.value.trim()
+
+  if (isSocks && hasAuth) {
+    const type = typeInput.value.toUpperCase()
+    authWarning.textContent = `⚠️ ${type} proxies do NOT support authentication in Chrome. Please remove credentials or use HTTP proxy.`
+    authWarning.style.display = 'block'
+  } else {
+    authWarning.style.display = 'none'
+  }
+}
+
+// Listen for type input change
+typeInput.addEventListener('change', updateAuthWarning)
+
+// Listen for username/password input changes
+usernameInput.addEventListener('input', updateAuthWarning)
+passwordInput.addEventListener('input', updateAuthWarning)
+
+// ============== Test Connection ==============
+
+// Test current active proxy connection
+btnTestConnection.addEventListener('click', async () => {
+  if (!activeProxyId) {
+    alert('No proxy is currently active. Please activate a proxy first.')
+    return
+  }
+
+  const proxy = proxies.find(p => p.id === activeProxyId)
+  if (!proxy) {
+    alert('Active proxy not found in list.')
+    return
+  }
+
+  // Disable button during test
+  btnTestConnection.disabled = true
+  btnTestConnection.textContent = '🔧 Testing...'
+
+  try {
+    const result = await chrome.runtime.sendMessage({
+      action: 'testConnection',
+      proxy: proxy,
+    })
+
+    // Show results in logs panel
+    logsPanel.style.display = 'block'
+    document.body.classList.add('logs-open')
+
+    // Add test results to logs
+    const resultLogs = result.diagnostics.map(d => ({
+      id: Date.now() + Math.random(),
+      timestamp: new Date().toISOString(),
+      level: d.level,
+      message: d.message,
+      host: result.host,
+      port: result.port,
+    }))
+
+    transientLogs = [...resultLogs, ...transientLogs]
+    renderLogs()
+
+    // Also scroll to top of logs
+    logsList.scrollTop = 0
+  } catch (error) {
+    alert(`Test failed: ${error.message}`)
+  } finally {
+    btnTestConnection.disabled = false
+    btnTestConnection.textContent = '🔧 Test Current'
+    // Refresh logs to show any new entries
+    await refreshLogs()
+  }
 })

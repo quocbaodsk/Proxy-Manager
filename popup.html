@@ -6,14 +6,18 @@
     <title>Proxy Manager</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <div class="container">
       <header>
-        <h1>Proxy Manager</h1>
+        <div class="title-block">
+          <h1>Proxy Manager</h1>
+          <p class="subtitle">Smart routing, clear control</p>
+        </div>
         <div class="header-right">
+          <button id="btn-logs" class="btn-logs" title="View Connection Logs">📋</button>
           <div id="status" class="status status-off">Direct</div>
           <button id="btn-ua" class="btn-ua" title="Change User-Agent">🌐</button>
         </div>
@@ -32,20 +36,39 @@
         <button id="btn-ua-reset" class="btn btn-ua-reset">Reset to Default</button>
       </div>
 
+      <!-- Connection Logs Panel (hidden by default) -->
+      <div class="logs-panel" id="logs-panel" style="display: none">
+        <div class="logs-header">
+          <span>Connection Logs</span>
+          <button id="btn-logs-close" class="btn-logs-close">✕</button>
+        </div>
+        <div class="logs-actions">
+          <button id="btn-logs-refresh" class="btn-logs-action" title="Refresh logs">🔄 Refresh</button>
+          <button id="btn-logs-clear" class="btn-logs-action" title="Clear logs">🗑️ Clear</button>
+        </div>
+        <div class="logs-list" id="logs-list">
+          <!-- Dynamic log items will be inserted here -->
+        </div>
+      </div>
+
       <!-- Quick Actions -->
+      <div class="section-title">Connection</div>
       <div class="quick-actions">
         <button id="btn-direct" class="btn btn-direct active">Direct Connection</button>
       </div>
 
       <!-- Proxy List -->
+      <div class="section-title">Proxies</div>
       <div class="proxy-list" id="proxy-list">
         <!-- Dynamic proxy items will be inserted here -->
       </div>
 
       <!-- Action Buttons -->
+      <div class="section-title">Tools</div>
       <div class="action-buttons">
         <button id="btn-add" class="btn btn-add">+ Add Proxy</button>
         <button id="btn-ping" class="btn btn-ping">⚡ Check Ping</button>
+        <button id="btn-test-connection" class="btn btn-test-connection">🔧 Test Current</button>
       </div>
 
       <!-- Add/Edit Form (hidden by default) -->
@@ -63,6 +86,7 @@
             <label>Type</label>
             <select id="proxy-type">
               <option value="http">HTTP</option>
+              <option value="socks4">SOCKS4</option>
               <option value="socks5">SOCKS5</option>
             </select>
           </div>
@@ -79,12 +103,13 @@
 
           <div class="form-row">
             <label>Username</label>
-            <input type="text" id="proxy-username" placeholder="Optional" />
+            <input type="text" id="proxy-username" placeholder="Optional (HTTP only)" />
           </div>
 
           <div class="form-row">
             <label>Password</label>
-            <input type="password" id="proxy-password" placeholder="Optional" />
+            <input type="password" id="proxy-password" placeholder="Optional (HTTP only)" />
+            <span class="form-hint form-warning" id="auth-warning" style="display: none">⚠️ SOCKS proxies do NOT support authentication in Chrome. Please remove credentials or use HTTP proxy.</span>
           </div>
 
           <div class="form-row">
